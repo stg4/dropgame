@@ -1,61 +1,8 @@
-/**
- * The Drop class is a blueprint for each raindrop we generate
- * @author  John Doe
- * @version 1.0, May 2014
- */
-function Drop(){
-	this.x; //starts empty, will keep track of each drop's left-right position as a #
-	this.y; //starts empty, will keep track of each drop's up-down position as a #
-	this.item_on_page; //represents drop's physical presence on the screen
-	/** 
-	*	The create method does lots of things when a drop gets created on the page
-	*/
-	this.create = function(){
-		//make a section tag in the HTML, store it into the item-on-page we set up above.
-		this.item_on_page = document.createElement("section");
-		//give it a class which styles it in CSS to resemble a drop
-		this.item_on_page.className = "raindrop";
-		//store a random x and y position, different for each drop. I'm using screen width or 500, height of 300:
-		this.x = Math.floor(Math.random()*500);
-		this.y = -50;
-		//use those x and y coordinates in the CSS to position the drop:
-		this.item_on_page.style.left = this.x + "px";
-		this.item_on_page.style.top = this.y + "px";
-		//attach the item to our HTML hierarchy, as a child of the body:
-		document.getElementsByTagName("body")[0].appendChild(this.item_on_page);
-	}
-	/** 
-	*   The destroy function does lots of cleaning up when a drop is removed from the page
-	*/
-	this.destroy = function(){
-		// clear all splashing images first
-		for (var j = 0; j < document.getElementsByClassName("splash").length; j++){
-			var thatsplash = document.getElementsByClassName("splash")[j];
-			document.getElementsByTagName("body")[0].removeChild(thatsplash);
-		}
-		// create an image to hold a splash animation
-		var newsplash = document.createElement("img");
-		// set its source and other styling
-		newsplash.src = "img/splash-anim.gif?"+Math.random();
-		newsplash.className = "splash";
-		newsplash.style.position = "absolute";
-		newsplash.style.left = this.x+"px";
-		newsplash.style.top = this.y+"px";
-		// attach the splashing image to our HTML hierarchy
-		document.getElementsByTagName("body")[0].appendChild(newsplash);
-		// remove this drop from the array. First look up and store the current drop's index # in the array
-		var this_drops_index_num = dropArray.indexOf(this);
-		// remove exactly one drop from the array, starting at the current drop's index number
-		dropArray.splice(this_drops_index_num,1);
-		// remove it from the page
-		document.getElementsByTagName("body")[0].removeChild(this.item_on_page);
-	}
-} //close the Drop class
-
 // declare var's here outside of curlies, so all functions can refer to them
 var spawntimer;
 var movetimer;
 var dropArray = new Array();
+var user_bucket = new Bucket(25,250);
 
 onload=init;
 
@@ -63,6 +10,11 @@ function init(){
 	// setInterval fires off a function periodically
 	spawntimer = setInterval(spawn,500);
 	movetimer = setInterval(moveAllDrops,100);
+	// actually put the bucket on the page
+	user_bucket.create();
+	document.onkeydown = function(e){
+		checkKey(e);
+	}
 }
 
 function spawn(){
@@ -85,5 +37,48 @@ function moveAllDrops(){
 		if(currentdrop.y > 350){
 			currentdrop.destroy();
 		}
+		// if the currentdrop is "hitting" the bucket
+		if(collisionCheck(user_bucket, currentdrop)){
+			// do various things like add to score, and get rid of drop
+			currentdrop.destroy();
+		}
 	}// close FOR loop
+}
+
+function checkKey(e){
+	// equalize understanding of the event in all browsers
+	e = e || window.event;
+	// if it's the left errow...
+	if(e.keyCode == '39'){
+		// add to buckets x (which will move it rightward) and apply to CSS 'left'
+		user_bucket.x += 15;
+		user_bucket.setpos();
+	} else if(e.keyCode == '37'){
+		// add to buckets x (which will move it leftward) and apply to CSS 'left'
+		user_bucket.x -= 15;
+		user_bucket.setpos();
+	}
+}
+
+function collisionCheck(big_obj, sm_obj){
+	
+	var big_obj_left_x = big_obj.x;
+	var big_obj_right_x = big_obj.x + big_obj.width;
+	var big_obj_top_y = big_obj.y;
+	var big_obj_bottom_y = big_obj.y + big_obj.height;
+	
+	var sm_obj_left_x = sm_obj.x;
+	var sm_obj_right_x = sm_obj.x + sm_obj.width;
+	var sm_obj_top_y = sm_obj.y;
+	var sm_obj_bottom_y = sm_obj.y + sm_obj.height;
+	// if the coordinates of the two objects indicate they're touching in their left-to-right positions
+	if((sm_obj_left_x > big_obj_left_x)&&(sm_obj_right_x < big_obj_right_x)){
+		// if the coordinates of the two objects indicate they're touching in their top-to-bottom positions
+		if((sm_obj_top_y > big_obj_top_y)&&(sm_obj_bottom_y < big_obj_bottom_y)){
+			// send back that yes, they're colliding! 
+			return true;
+		}
+	}
+	// otherwise send back that no, they're NOT colliding!
+	return false;
 }
